@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>YTDL — YouTube Downloader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --border: #222;
+    --accent: #ff3c3c;
+    --accent2: #ff9500;
+    --text: #f0f0f0;
+    --muted: #666;
+    --green: #00e676;
+    --radius: 4px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2.5rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .logo span { color: var(--accent); }
+  .logo-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.6); }
+  }
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 2px;
+    letter-spacing: 1px;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 5rem 2.5rem 3rem;
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+    text-align: center;
+  }
+  .hero h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    line-height: 0.9;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+    position: relative;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+    margin-bottom: 3rem;
+  }
+
+  /* URL FORM */
+  .url-form {
+    display: flex;
+    gap: 0;
+    max-width: 680px;
+    margin: 0 auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .url-form:focus-within {
+    border-color: var(--accent);
+  }
+  .url-input {
+    flex: 1;
+    background: var(--surface);
+    border: none;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    padding: 1rem 1.2rem;
+    outline: none;
+    min-width: 0;
+  }
+  .url-input::placeholder { color: var(--muted); }
+  .fetch-btn {
+    background: var(--accent);
+    border: none;
+    color: white;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    padding: 1rem 2rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+  }
+  .fetch-btn:hover { background: #e02020; }
+  .fetch-btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* MAIN CONTENT */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 2rem 2.5rem 4rem;
+    flex: 1;
+  }
+
+  /* INFO CARD */
+  .info-card {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .info-card.visible { display: flex; flex-direction: column; }
+
+  .card-top {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1.5rem;
+    align-items: flex-start;
+  }
+  .card-thumb {
+    width: 160px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 2px;
+    flex-shrink: 0;
+    background: var(--border);
+  }
+  .card-meta { flex: 1; min-width: 0; }
+  .card-type-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 0.5rem;
+  }
+  .card-title {
+    font-size: 1.05rem;
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* OPTIONS */
+  .options-row {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .option-group { display: flex; flex-direction: column; gap: 0.4rem; }
+  .option-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .option-select, .format-toggle { 
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.8rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .option-select:focus { border-color: var(--accent); }
+
+  .format-btns { display: flex; gap: 0; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .fmt-btn {
+    background: var(--bg);
+    border: none;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    padding: 0.5rem 1.2rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .fmt-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+  .fmt-btn:not(.active):hover { color: var(--text); }
+
+  .dl-btn {
+    margin-left: auto;
+    background: var(--accent);
+    color: white;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    padding: 0.6rem 2rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.15s;
+    align-self: flex-end;
+  }
+  .dl-btn:hover { background: #e02020; }
+  .dl-btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+  /* PROGRESS */
+  .progress-section {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    animation: slideIn 0.3s ease;
+  }
+  .progress-section.visible { display: block; }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 1rem;
+  }
+  .progress-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .progress-pct {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--accent);
+  }
+
+  .progress-bar-wrap {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  .progress-stats {
+    display: flex;
+    gap: 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .stat-val { color: var(--text); display: block; font-size: 0.85rem; margin-bottom: 2px; }
+
+  .done-banner {
+    display: none;
+    gap: 1rem;
+    align-items: center;
+    background: #0a1f0d;
+    border: 1px solid #1a4020;
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    animation: slideIn 0.3s ease;
+  }
+  .done-banner.visible { display: flex; }
+  .done-icon { font-size: 1.5rem; }
+  .done-text { flex: 1; }
+  .done-text strong { display: block; color: var(--green); font-size: 0.95rem; margin-bottom: 0.2rem; }
+  .done-text span { color: var(--muted); font-size: 0.8rem; font-family: 'Space Mono', monospace; }
+  .save-btn {
+    background: var(--green);
+    color: #000;
+    border: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    padding: 0.6rem 1.8rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: opacity 0.15s;
+  }
+  .save-btn:hover { opacity: 0.85; }
+
+  .error-banner {
+    display: none;
+    background: #1f0a0a;
+    border: 1px solid #401010;
+    border-radius: var(--radius);
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    animation: slideIn 0.3s ease;
+  }
+  .error-banner.visible { display: block; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.2rem 2.5rem;
+    text-align: center;
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  /* LOADING SPINNER */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    .card-top { flex-direction: column; }
+    .card-thumb { width: 100%; height: 160px; }
+    .dl-btn { margin-left: 0; width: 100%; }
+    header { padding: 1rem 1.2rem; }
+    .hero { padding: 3rem 1.2rem 2rem; }
+    main { padding: 1.5rem 1.2rem 3rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">YT<span>DL</span> <div class="logo-dot"></div></div>
+  <span class="tag">POWERED BY YT-DLP</span>
+</header>
+
+<section class="hero">
+  <h1>DOWNLOAD<br><em>ANYTHING.</em></h1>
+  <p>Videos, playlists, audio — any quality. No fuss.</p>
+  <div class="url-form">
+    <input class="url-input" id="urlInput" type="text" placeholder="Paste YouTube URL here…" autocomplete="off" spellcheck="false"/>
+    <button class="fetch-btn" id="fetchBtn" onclick="fetchInfo()">FETCH</button>
+  </div>
+</section>
+
+<main>
+
+  <div class="error-banner" id="errorBanner"></div>
+
+  <!-- Info card -->
+  <div class="info-card" id="infoCard">
+    <div class="card-top">
+      <img class="card-thumb" id="cardThumb" src="" alt="thumbnail"/>
+      <div class="card-meta">
+        <div class="card-type-badge" id="cardBadge">VIDEO</div>
+        <div class="card-title" id="cardTitle">—</div>
+        <div class="card-sub" id="cardSub">—</div>
+      </div>
+    </div>
+    <div class="options-row">
+      <div class="option-group">
+        <span class="option-label">Format</span>
+        <div class="format-btns">
+          <button class="fmt-btn active" id="btnMp4" onclick="setFmt('mp4')">MP4</button>
+          <button class="fmt-btn" id="btnMp3" onclick="setFmt('mp3')">MP3</button>
+        </div>
+      </div>
+      <div class="option-group" id="qualityGroup">
+        <span class="option-label">Quality</span>
+        <select class="option-select" id="qualitySelect">
+          <option value="best">Best available</option>
+        </select>
+      </div>
+      <button class="dl-btn" id="dlBtn" onclick="startDownload()">DOWNLOAD</button>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-section" id="progressSection">
+    <div class="progress-header">
+      <span class="progress-label" id="progressLabel">DOWNLOADING</span>
+      <span class="progress-pct" id="progressPct">0%</span>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+    <div class="progress-stats">
+      <div>
+        <span class="stat-val" id="statSpeed">—</span>
+        SPEED
+      </div>
+      <div>
+        <span class="stat-val" id="statEta">—</span>
+        ETA
+      </div>
+    </div>
+  </div>
+
+  <!-- Done -->
+  <div class="done-banner" id="doneBanner">
+    <div class="done-icon">✓</div>
+    <div class="done-text">
+      <strong>Download complete</strong>
+      <span id="doneFilename">Ready to save</span>
+    </div>
+    <a class="save-btn" id="saveBtn" href="#">SAVE FILE</a>
+  </div>
+
+</main>
+
+<footer>
+  For personal use only · Respect copyright laws · Built with yt-dlp + Flask
+</footer>
+
+<script>
+  let currentFmt = 'mp4';
+  let currentJobId = null;
+  let videoInfo = null;
+
+  function setFmt(fmt) {
+    currentFmt = fmt;
+    document.getElementById('btnMp4').classList.toggle('active', fmt === 'mp4');
+    document.getElementById('btnMp3').classList.toggle('active', fmt === 'mp3');
+    document.getElementById('qualityGroup').style.display = fmt === 'mp3' ? 'none' : '';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorBanner');
+    el.textContent = '⚠ ' + msg;
+    el.classList.add('visible');
+  }
+  function clearError() {
+    document.getElementById('errorBanner').classList.remove('visible');
+  }
+
+  async function fetchInfo() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) return;
+
+    clearError();
+    document.getElementById('infoCard').classList.remove('visible');
+    document.getElementById('doneBanner').classList.remove('visible');
+    document.getElementById('progressSection').classList.remove('visible');
+
+    const btn = document.getElementById('fetchBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>FETCHING';
+
+    try {
+      const res = await fetch('/api/info', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({url})
+      });
+      const data = await res.json();
+      if (data.error) { showError(data.error); return; }
+
+      videoInfo = data;
+      renderInfoCard(data);
+    } catch(e) {
+      showError('Network error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'FETCH';
+    }
+  }
+
+  function formatDuration(s) {
+    if (!s) return '';
+    const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    if (h) return `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    return `${m}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function renderInfoCard(data) {
+    document.getElementById('cardBadge').textContent = data.type === 'playlist' ? 'PLAYLIST' : 'VIDEO';
+    document.getElementById('cardTitle').textContent = data.title || 'Unknown';
+
+    if (data.type === 'playlist') {
+      document.getElementById('cardSub').textContent = `${data.count} videos`;
+      document.getElementById('cardThumb').src = data.thumbnail || '';
+    } else {
+      const dur = formatDuration(data.duration);
+      document.getElementById('cardSub').textContent = [data.channel, dur].filter(Boolean).join(' · ');
+      document.getElementById('cardThumb').src = data.thumbnail || '';
+
+      const sel = document.getElementById('qualitySelect');
+      sel.innerHTML = '<option value="best">Best available</option>';
+      (data.available_qualities || []).forEach(h => {
+        const opt = document.createElement('option');
+        opt.value = h + 'p';
+        opt.textContent = h + 'p';
+        sel.appendChild(opt);
+      });
+    }
+
+    document.getElementById('infoCard').classList.add('visible');
+  }
+
+  async function startDownload() {
+    if (!videoInfo) return;
+    const url = document.getElementById('urlInput').value.trim();
+    const quality = document.getElementById('qualitySelect').value;
+
+    clearError();
+    document.getElementById('doneBanner').classList.remove('visible');
+    document.getElementById('progressSection').classList.add('visible');
+    document.getElementById('dlBtn').disabled = true;
+
+    const res = await fetch('/api/download', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({url, format: currentFmt, quality})
+    });
+    const data = await res.json();
+    if (data.error) { showError(data.error); return; }
+
+    currentJobId = data.job_id;
+    trackProgress(data.job_id);
+  }
+
+  function trackProgress(jobId) {
+    const src = new EventSource(`/api/progress/${jobId}`);
+    src.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      const pct = d.percent || 0;
+
+      document.getElementById('progressPct').textContent = pct + '%';
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('statSpeed').textContent = d.speed || '—';
+      document.getElementById('statEta').textContent = d.eta || '—';
+
+      const labelMap = {starting: 'STARTING', downloading: 'DOWNLOADING', processing: 'PROCESSING', done: 'DONE', error: 'ERROR'};
+      document.getElementById('progressLabel').textContent = labelMap[d.status] || d.status.toUpperCase();
+
+      if (d.status === 'done') {
+        src.close();
+        document.getElementById('progressSection').classList.remove('visible');
+        document.getElementById('doneBanner').classList.add('visible');
+        document.getElementById('doneFilename').textContent = videoInfo?.title || 'Your file is ready';
+        document.getElementById('saveBtn').href = `/api/download-file/${jobId}`;
+        document.getElementById('dlBtn').disabled = false;
+      } else if (d.status === 'error') {
+        src.close();
+        document.getElementById('progressSection').classList.remove('visible');
+        showError(d.error || 'Download failed');
+        document.getElementById('dlBtn').disabled = false;
+      }
+    };
+    src.onerror = () => { src.close(); };
+  }
+
+  // Allow Enter key to fetch
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchInfo();
+  });
+</script>
+</body>
+</html>
